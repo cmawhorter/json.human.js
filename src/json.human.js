@@ -4,7 +4,7 @@
     if (typeof define === 'function' && define.amd) {
         define([], factory);
     } else if (typeof module !== 'undefined' && module.exports) {
-		module.exports = factory();
+        module.exports = factory();
     } else {
         root.JsonHuman = factory();
     }
@@ -120,8 +120,16 @@
         }
     }
 
-    function _format(data, options, parentKey) {
+    function toKey(key, keyPath) {
+      return key;
+    }
 
+    function toValue(value, key, keyPath) {
+      return value;
+    }
+
+    function _format(data, options, parentKey, keyPath) {
+        keyPath = Array.isArray(keyPath) ? keyPath.concat([parentKey]) : [];
         var result, container, key, keyNode, valNode, len, childs, tr, value,
             isEmpty = true,
             isSpecial = false,
@@ -183,8 +191,8 @@
 
                 value = data[key];
 
-                valNode = _format(value, options, key);
-                keyNode = sn("th", OBJ_KEY_CLASS_NAME, key);
+                valNode = _format(options.toValue(value, key, keyPath), options, key, keyPath);
+                keyNode = sn("th", OBJ_KEY_CLASS_NAME, options.toKey(key, keyPath));
 
                 if( hyperlinksEnabled &&
                     typeof(value) === 'string' &&
@@ -227,16 +235,16 @@
 
                 for (key = 0, len = data.length; key < len; key += 1) {
 
-                    keyNode = sn("th", ARRAY_KEY_CLASS_NAME, key);
+                    keyNode = sn("th", ARRAY_KEY_CLASS_NAME, options.toKey(key, keyPath));
                     value = data[key];
 
                     if (hyperlinksEnabled && typeof(value) === "string") {
-                        valNode = _format(value, options, key);
+                        valNode = _format(options.toValue(value, key, keyPath), options, key, keyPath);
                         valNode = scn("td", ARRAY_VAL_CLASS_NAME,
                             linkNode(valNode, value, aTarget));
                     } else {
                         valNode = scn("td", ARRAY_VAL_CLASS_NAME,
-                            _format(value, options, key));
+                            _format(options.toValue(value, key, keyPath), options, key, keyPath));
                     }
 
                     tr = document.createElement("tr");
@@ -262,12 +270,13 @@
 
     function format(data, options) {
         options = validateOptions(options || {});
+        options.toKey = options.toKey || toKey;
+        options.toValue = options.toValue || toValue;
 
         var result;
 
-        result = _format(data, options);
+        result = _format(options.toValue(data, null, []), options);
         result.className = result.className + " " + prefixer("root");
-
         return result;
     }
 
